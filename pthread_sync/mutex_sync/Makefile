@@ -10,7 +10,7 @@ else
 endif
 
 
-BIN = sample_pthread_sync
+BIN = sample_mutex
 
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:%.C = %.o)
