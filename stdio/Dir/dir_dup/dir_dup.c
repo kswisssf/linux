@@ -142,12 +142,9 @@ fopen与open的区别
 /*
 DEMO DESC:
 dup2(fd, fd1) 让fd1和fd同时指向a.txt
-
 */
-
 void dup2_demo(void)
 {
-
     int fd = open("a.txt", O_CREAT | O_RDWR | O_TRUNC, 0777);
     if(fd == -1)
     {
