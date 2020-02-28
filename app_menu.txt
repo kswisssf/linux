@@ -24,7 +24,11 @@
 	   |--cond_sync 
 	   |--
 	+--stdio
-	   |--Dir   	
+	   |--Dir
+	      |--dir_base 
+	      |--dir_ctrl
+	      |--dir_dup
+	      |--   	
 	   |--errno  
 	   |--fflush  
 	   |--printf
