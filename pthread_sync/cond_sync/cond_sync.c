@@ -1,4 +1,10 @@
 /*
+条件变量的优点:
+  相较于mutex而言，条件变量可以减少竞争。
+  如直接使用mutex，除了生产者、消费者之间要竞争互斥量以外，消费者之间也需要竞争互斥量，
+  但如果汇聚（链表）中没有数据，消费者之间竞争互斥锁是无意义的。有了条件变量机制以后，
+  只有生产者完成生产，才会引起消费者之间的竞争。提高了程序效率。 
+
 一、条件变量:
   1.与互斥锁不同，条件变量是用来等待而不是用来上锁的。条件变量用来自动阻塞一个线程，直到某特殊
 	情况发生为止。通常条件变量和互斥锁同时使用。
@@ -13,9 +19,9 @@
     可以利用函数pthread_cond_init动态初始化。
 
 二、条件变量分为两部分: 条件和变量。
- 	条件本身是由互斥量保护的。
-	线程在改变条件状态前先要锁住互斥量。
-	它利用线程间共享的全局变量进行同步的一种机制。
+  1.条件本身是由互斥量保护的。
+  2.线程在改变条件状态前先要锁住互斥量。
+  3.它利用线程间共享的全局变量进行同步的一种机制。
 
 三、主要应用函数:
   1. 初始化一个条件变量
@@ -79,12 +85,108 @@ DEMO DESC:
 struct msg{
 	struct msg *next;
 	int num;
-}
+};
 
 struct msg *head;
 struct msg *mp;
 
-
 /* 静态初始化 一个条件变量和一个互斥量*/
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t has_product = PTHREAD_COND_INITIALIZER;
+
+void *producer(void *p)
+{
+	for(;;)
+	{
+		
+		mp = (struct msg *)malloc(sizeof(struct msg));
+		mp->num = rand()%1000 + 1;		 //模拟生产一个产品
+		printf("\n---product ---:%d--\n", mp->num);
+
+		pthread_mutex_lock(&mutex);
+		mp->next = head;      			 //头插法
+		head = mp;
+		pthread_mutex_unlock(&mutex);
+
+		pthread_cond_signal(&has_product);//将等待在该条件变量上的一个线程唤醒
+		sleep(rand() % 5);
+	}
+}
+
+void *consumer_a(void *p)
+{
+	for(;;)
+	{
+		pthread_mutex_lock(&mutex);
+		if(head == NULL)
+		{
+			//头指针为空,说明没有节点
+			pthread_cond_wait(&has_product, &mutex);
+		}
+		mp = head;
+		head = head->next;	//模拟消费掉一个产品
+		pthread_mutex_unlock(&mutex);
+
+		printf("===consumer_a---%d\n", mp->num);
+		free(mp);
+		mp = NULL;
+		sleep(rand() % 5);
+		
+	}
+
+}
+
+void *consumer_b(void *p)
+{
+	for(;;)
+	{
+		pthread_mutex_lock(&mutex);
+		if(head == NULL)
+		{
+			//头指针为空,说明没有节点 
+			pthread_cond_wait(&has_product, &mutex);
+		}
+		mp = head;
+		head = head->next; //模拟消费掉一个产品
+		pthread_mutex_unlock(&mutex);
+
+		printf("===consumer_b---%d\n", mp->num);
+		free(mp);
+		mp = NULL;
+		sleep(rand() % 5);
+	}
+}
+
+int main(int argc, char *argv[])
+{
+	pthread_t pid_pc, pid_c[2];
+	srand(time(NULL));
+	int ret;
+
+	ret = pthread_create(&pid_pc, NULL, producer, NULL);
+	if(ret != 0)
+	{
+		perror("create pid_pc\n");
+		exit(1);
+	}
+
+	ret = pthread_create(&pid_c[0], NULL, consumer_a, NULL);
+	if(ret != 0)
+	{
+		perror("create pid_c[0]\n");
+		exit(1);
+	}
+
+	ret = pthread_create(&pid_c[1], NULL, consumer_b, NULL);
+	if(ret != 0)
+	{
+		perror("create pid_c[1]\n");
+		exit(1);
+	}
+
+	pthread_join(pid_pc, NULL);
+	pthread_join(pid_c[0], NULL);
+	pthread_join(pid_c[1], NULL);
+
+	return 0;
+}
