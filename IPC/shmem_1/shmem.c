@@ -101,6 +101,7 @@ int main(int argc, char **argv)
 	if(fork())	//create father
 	{
 		/*
+		void *shmat(int shmid, const void *shmaddr, int shmflg)
 		shmat(把共享内存区对象映射到调用进程的地址空间)
 		函数传入值:
 		shmid:共享内存标识符
