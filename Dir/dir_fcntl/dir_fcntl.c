@@ -33,8 +33,74 @@
 	   如果无法建立锁定，则返回-1，错误代码为EACCES 或EAGAIN。
 	8. F_SETLKW F_SETLK 作用相同，但是无法建立锁定时，此调用会一直等到锁定动作成功为止。
 	   若在等待锁定的过程中被信号中断时，会立即返回-1，错误代码为EINTR。
+*/
 
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+int fcntl_demo(void)
+{
+
+	int flag;
+	int get_flag;
+	int fd;
+
+	//测试字符串
+	char *msg1 = "china is good\n";
+	char *msg2 = "you are lying\n";
+
+	//以只写方式打开文件
+	fd = open("fcntl.txt", O_CREAT|O_WRONLY, 0766);
+	if(fd == -1)
+	{
+		perror("open");
+		exit(1);
+	}
+
+	//输入新的内容，该内容会覆盖原来的内容
+	if(write(fd, msg1, strlen(msg1)) == -1)
+	{
+		perror("write msg1");
+		exit(1);
+	}
+
+	//使用 F_GETFL 命令得到文件状态标志
+	get_flag = fcntl(fd, F_GETFL, 0);
+	if(get_flag == -1)
+	{
+		perror("F_GETFL");
+		exit(1);
+	}
+
+	printf("get_flag : %d\n", get_flag);
+
+	//将文件状态标志添加 “追加写” 选项
+	flag |=O_APPEND;
+	// 将文件状态修改为追加写
+	if(fcntl(fd, F_SETFL, flag) == -1)
+	{
+		perror("F_SETFL");
+		exit(1);
+	}
+
+	//再次输入新的内容，该内容会追加到旧内容对的后面
+	if( write(fd, msg2, strlen(msg2)) == -1)
+	{
+		perror("write msg2");
+		exit(1);
+	}
+
+	close(fd);
+
+	return 0;
+}
+
+/*
 二、延展函数:
 　　 int fcntl(int fd, int cmd, struct flock *lock);
 
@@ -68,77 +134,171 @@
 
 */
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-int fcntl_demo(void)
+int fcntl_lock(void) 
 {
+	int fd,res;
+	struct flock region;
 
-	int flag;
-	int get_flag;
-	int fd;
-
-	//测试字符串
-	char *msg1 = "china is good\n";
-	char *msg2 = "you are lying\n";
-
-	//以只写方式打开文件
-	fd = open("test.txt", O_WRONLY|O_CREAT, 0766);
+	//chmod("test_file",S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+	fd = open("lock_file", O_CREAT|O_RDWR, 0777);
 	if(fd == -1)
-	{
-		perror("open");
+    {
+      printf("Open error.\n");
+      exit(1);
+    }
+
+	//F_GETLK 取得文件锁定的状态。
+	if((res = fcntl(fd, F_GETLK, &region)) == 0)
+    {
+    	if(region.l_type == F_UNLCK)	//F_UNLCK 删除之前建立的锁定
+        {
+          printf("Read lock will be setted.\n");
+          printf("l.type has not been changed.\n");
+          printf("l_start=%d\n",(int)region.l_start);
+          printf("l_len=%d\n",(int)region.l_len);
+          printf("l_pid=%d\n",(int)region.l_pid);
+        }
+    }
+ 	else
+    {
+    	printf("F_GETLK error.\n");
+    	exit(1);
+    }
+
+  	region.l_type = F_RDLCK;
+  	region.l_whence = SEEK_SET;
+  	region.l_start = 0;
+  	region.l_len = 40;
+  	region.l_pid = 2;
+  	//F_SETLK 设置文件锁定的状态。此时flcok结构的l_type值必须是F_RDLCK、F_WRLCK或F_UNLCK。
+  	if((res = fcntl(fd, F_SETLK, &region)) == 0)
+    {
+    	if(region.l_type == F_RDLCK)
+        {
+          printf("l.type has been changed.\n");
+          printf("l_start=%d\n",(int)region.l_start);
+          printf("l_len=%d\n",(int)region.l_len);
+          printf("l_pid=%d\n",(int)region.l_pid);
+        }
+    }
+  	else
+   	{
+    	printf("F_SETLK  F_RDLCK.\n");
+    	exit(1);
+   	}
+
+	
+	if((res = fcntl(fd, F_GETLK, &region)) == 0)
+    {
+      if(region.l_type == F_UNLCK)
+        {
+          printf("Write lock will be setted.\n");
+          printf("l.type has not been changed.\n");
+          printf("l_start=%d\n",(int)region.l_start);
+          printf("l_len=%d\n",(int)region.l_len);
+          printf("l_pid=%d\n",(int)region.l_pid);
+        }
+    }
+  	else
+    {
+    	printf("Set lock error.\n");
+    	exit(1);
+    }
+
+    region.l_type = F_WRLCK;
+	region.l_whence = SEEK_SET;
+	region.l_start = 0;
+	region.l_len = 40;
+	region.l_pid = 2;
+	if((res = fcntl(fd, F_SETLK, &region)) == 0)
+    {
+		if(region.l_type == F_WRLCK)
+        {
+          printf("l.type has been changed.\n");
+          printf("l_start=%d\n",(int)region.l_start);
+          printf("l_len=%d\n",(int)region.l_len);
+          printf("l_pid=%d\n",(int)region.l_pid);
+        }
+    }
+	else
+   	{
+		printf("Set lock error.\n");
 		exit(1);
-	}
+   	}
+  	
+  	close(fd);
 
-	//输入新的内容，该内容会覆盖原来的内容
-	if(write(fd, msg1, strlen(msg1)) == -1)
-	{
-		perror("write");
-		exit(1);
-	}
+  	return 0;
+}   
 
-	//使用 F_GETFL 命令得到文件状态标志
-	get_flag = fcntl(fd, F_GETFL, 0);
-	if(get_flag == -1)
-	{
-		perror("F_GETFL");
-		exit(1);
-	}
+/*
+1. 函数原型
+	int flock(int fd, int operation);  
+	//只是建议性锁
+	其中fd是系统调用open返回的文件描述符，operation的选项有：
+	LOCK_SH ：共享锁
+	LOCK_EX ：排他锁或者独占锁
+	LOCK_UN : 解锁。
+	LOCK_NB ：非阻塞（与以上三种操作一起使用）
 
-	printf("get_flag : %d\n", get_flag);
+	关于flock函数，首先要知道flock函数只能对整个文件上锁，而不能对文件的某一部分上锁，
+	这是于fcntl/lockf的第一个重要区别，后者可以对文件的某个区域上锁。
 
-	//将文件状态标志添加 “追加写” 选项
-	flag = get_flag|O_APPEND;
-	// 将文件状态修改为追加写
-	if(fcntl(fd, F_SETLK, flag) == -1)
-	{
-		perror("F_SETLK");
-		exit(1);
-	}
+	其次，flock只能产生劝告性锁。我们知道，linux存在强制锁（mandatory lock）和
+	劝告锁（advisory lock）。所谓强制锁，比较好理解，就是你家大门上的那把锁，
+	最要命的是只有一把钥匙，只有一个进程可以操作。所谓劝告锁，本质是一种协议，你访问文件前，
+	先检查锁，这时候锁才其作用，如果你不那么kind，不管三七二十一，就要读写，那么劝告锁
+	没有任何的作用。而遵守协议，读写前先检查锁的那些进程，叫做合作进程。
 
-	//再次输入新的内容，该内容会追加到旧内容对的后面
-	if( write(fd, msg2, strlen(msg2)) == -1)
-	{
-		perror("write msg2");
-		exit(1);
-	}
+	再加上，flock可以有共享锁和排它锁，lockf只支持排它锁，但是fcntl里面参数flock可以有RDLCK读锁。
+	再次，flock和fcntl/lockf的区别主要在fork和dup时候的区别，后面有讲。
+	另外，flock不能再NFS文件系统上使用，如果要在NFS使用文件锁，请使用fcntl。
 
-	return 0;
+2.函数原型
+	int lockf(int fd, int cmd, off_t len);
+    fd为通过open返回的打开文件描述符。
+    
+    cmd的取值为：
+	F_LOCK：给文件互斥加锁，若文件以被加锁，则会一直阻塞到锁被释放。
+	F_TLOCK：同F_LOCK，但若文件已被加锁，不会阻塞，而回返回错误。
+	F_ULOCK：解锁。
+	F_TEST：测试文件是否被上锁，若文件没被上锁则返回0，否则返回-1。
+	
+	len：为从文件当前位置的起始要锁住的长度。
+	
+	通过函数参数的功能，可以看出lockf只支持排他锁，不支持共享锁。
+
+*/
+
+int lock_demo()
+{
+    int fd, ret;
+    int pid;
+
+    fd = open("lock.txt", O_RDWR);
+    
+    ret = flock(fd, LOCK_EX);
+    printf("flock return ret : %d\n", ret);
+    
+    ret = lockf(fd, F_LOCK, 0);
+    printf("lockf return ret: %d\n", ret);
+    
+    close(fd);
+    sleep(1);
+   
+    return 0;
 }
-
-
-lockf、flock的区别
 
 int main(int argc, char *argv[])
 {
 	printf("fcntl_demo running ...\n");
-
 	fcntl_demo();
+
+	printf("fcntl_lock running ...\n");
+	fcntl_lock();
+
+	printf("lock_demo running ...\n");
+	lock_demo();
 
 	return 0;
 }
