@@ -27,6 +27,11 @@ void close_pipe()
 	close(pipe_fd[0]);
 	close(pipe_fd[1]);
 }
+/*
+parent(fd[0])--->write--->child(fd[1])
+child(fd[1]) --->read---> parent(fd[0])
+*/
+
 
 int pipe_talk(const char *pipe_buf, int pipe_len)
 {
