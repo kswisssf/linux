@@ -55,7 +55,7 @@ int fcntl_demo(void)
 	char *msg2 = "you are lying\n";
 
 	//以只写方式打开文件
-	fd = open("fcntl.txt", O_CREAT|O_WRONLY, 0766);
+	fd = open("fcntl.txt", O_WRONLY, 0766);
 	if(fd == -1)
 	{
 		perror("open");
