@@ -23,12 +23,14 @@
 	   |--rwlock_sync  
 	   |--cond_sync 
 	   |--
-	+--stdio
-	   |--Dir
-	      |--dir_base 
-	      |--dir_ctrl
-	      |--dir_dup
-	      |--   	
+  	|--Dir
+	   |--dir_base 
+	   |--dir_ctrl
+	   |--dir_dup
+	   |--dir_fcntl 
+  	|--File_IO
+	   |--
+	+--stdio  	
 	   |--errno  
 	   |--fflush  
 	   |--printf
@@ -38,7 +40,7 @@
 三、预增加
    1.生产者和消费者模型，数据管理
    2.不定长参数 /va_list
-   3.fopen与open的区别
+   3.fopen与open的区别(2020/03/6/finish)
    4.fork（）与vfock（）
    5.Linux系统调用syscall,linux系统调用、库函数和内核函数关系与区别
    	 自己添加系统调用函数
