@@ -2,6 +2,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 /*
 相关函数： execl，execle，execlp，execv，execvp
@@ -26,9 +29,22 @@ execv函数族：系统来调用某程序模块
 
 本质：1、调用此函数时（成功的执行），调用的进程模块会替换现有的进程信息。
      2、execve才是系统内核函数，上述都会调用此函数来完成的功能从指定路径下查找    
+
+与system的区别
+	1、system（）和exec（）都可以执行进程外的命令，system是在原进程上开辟了一个新的进程，
+	   但是exec是用新进程（命令）覆盖了原有的进程.
+	2、system（）和exec（）都有能产生返回值，system的返回值并不影响原有进程，但是exec的
+	   返回值影响了原进程
+
 */
 #define SIZE     516
 //DESC:当前目录调用ls -al 命令
+/*  system（）和exec（）都有能产生返回值，system的返回值并不影响原有进程，但是exec的
+	返回值影响了原进程.
+	如果execve执行成功，则不执行后续的程序，阻塞住！而system是先fork出一个进程，
+	然后让子进程去执行execve调用
+*/
+//所以execve调用要放到最后，放在最前面，如果执行成功，则阻塞后面的程序
 int execve_demo(void)
 {
 	//获取新目录后的目录名
@@ -81,11 +97,22 @@ int execl_sc(const char *file, const char *args, ...)
 附加说明： 在编写具有SUID/SGID权限的程序时请勿使用system()，system()会继承环境变量，
 		 通过环境变量可能会造成系统安全的问题。
 
-范例：
+范例1：
 main()
 {
 　　system(“ls -al /etc/passwd /etc/shadow”);
 }
+
+范例2：
+char tmp[];
+sprintf(tmp,"/bin/mount -t vfat %s /mnt/usb",dev);
+system(tmp);
+
+与exec的区别
+	1、system（）和exec（）都可以执行进程外的命令，system是在原进程上开辟了一个新的进程，
+	   但是exec是用新进程（命令）覆盖了原有的进程.
+	2、system（）和exec（）都有能产生返回值，system的返回值并不影响原有进程，但是exec的
+	   返回值影响了原进程
 
 */
 
@@ -97,20 +124,25 @@ int system_sc(const char *cmdstring)
 
 	if(cmdstring == NULL)
 		return  1;
-
+	/*	如果execve执行成功，则不执行后续的程序，阻塞住！而system是先fork出一个进程，
+		然后让子进程去执行execve调用
+	*/
 	if((pid = fork()) < 0){
 		status = -1;
 	}
 	else if(pid == 0){
+		/*	如果execve执行成功，则不执行后续的程序，阻塞住！而system是先fork出一个进程，
+			然后让子进程去执行execve调用
+		*/
 		execl("/bin/sh", "sh", "-c", cmdstring, (char *)0);
 		_exit(127); //子进程正常执行则不会执行此_exit
 	}
 	else{
 		while(waitpid(pid, &status, 0) < 0){
-			if( errno != EINTER){
+			//if( errno != EINTER){
 				status = -1;
 				break;
-			}
+			//}
 		}
 	}
 }
@@ -118,7 +150,24 @@ int system_sc(const char *cmdstring)
 int main(int argc, char *argv[])
 {
 
+
+	printf("system_sc demo running ...\n");
+	system("ifconfig");
+	system_sc("ifconfig");
+	//system("PAUSE");
+	//system_sc("PAUSE");
+	system("clear");
+	system("dir");
+	system_sc("clear");
+	system_sc("dir");
+	
 	printf("execve_demo running...\n");
+	/*system（）和exec（）都有能产生返回值，system的返回值并不影响原有进程，但是exec的
+	返回值影响了原进程.
+	如果execve执行成功，则不执行后续的程序，阻塞住！而system是先fork出一个进程，
+	然后让子进程去执行execve调用
+	*/
+	//所以execve调用要放到最后，放在最前面，如果执行成功，则阻塞后面的程序
 	execve_demo();
 
 	return 0;
