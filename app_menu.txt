@@ -7,15 +7,14 @@
    linnux_app:
    	|--app_menu.txt  
 	|--README.md
-   	|--common  
-   	|--getopt		  
+   	|--common  	  
    	|--IPC
 	   |--pipe  	
 	   |--queue  
 	   |--semaphore  
 	   |--shmem_1  
 	   |--shmem_2  
-	   +--signal  
+	   \--signal  
 	|--pthread_base  
 	|--pthread_sync  
 	   |--sync_book   	
@@ -30,7 +29,9 @@
 	   |--dir_fcntl 
   	|--File_IO
 	   |--
-	+--stdio  	
+	|--Func_design
+	   |--   
+	\--stdio  	
 	   |--errno  
 	   |--fflush  
 	   |--printf
@@ -39,12 +40,14 @@
 
 三、预增加
    1.生产者和消费者模型，数据管理
-   2.不定长参数 /va_list
-   3.fopen与open的区别(2020/03/6/finish)
+   2.不定长参数 /va_list 	(2020/03/09)
+   3.fopen与open的区别	(2020/03/6/finish)
    4.fork（）与vfock（）
    5.Linux系统调用syscall,linux系统调用、库函数和内核函数关系与区别
    	 自己添加系统调用函数
    6.proc使用，自定义功能read_proc/write_proc
+   7.system与execv函数使用详解
+   8.linux进程相关函数(获取、销毁、切换···)
 
       
 
