@@ -47,7 +47,10 @@
    	 自己添加系统调用函数
    6.proc使用，自定义功能read_proc/write_proc
    7.system与execv函数使用详解
-   8.linux进程相关函数(获取、销毁、切换···)
-
+   8.linux进程相关函数(获取、销毁、切换···) 
+   9.getopt_long /atoi/通常使用GNU C提供的函数getopt、getopt_long、
+     getopt_long_only函数来解析命令行参数。
+   10.钩子函数
+   11.回调函数深度操作
       
 
