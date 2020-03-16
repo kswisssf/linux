@@ -149,8 +149,6 @@ int system_sc(const char *cmdstring)
 
 int main(int argc, char *argv[])
 {
-
-
 	printf("system_sc demo running ...\n");
 	system("ifconfig");
 	system_sc("ifconfig");
