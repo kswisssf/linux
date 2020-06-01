@@ -105,6 +105,18 @@ int pthread_func_b(char *msg)
 	等待指定的线程已经完全退出以后，再继续执行；否则，很容易产生“段错误”。
 
 六、线程分离
+
+    线程分离状态的理解
+    在任何一个时间点上，线程是可结合的（joinable），或者是分离的（detached）。
+一个可结合的线程能够被其他线程收回其资源和杀死；在被其他线程回收之前，它的存储器资源（如栈）是不释放的。
+相反，一个分离的线程是不能被其他线程回收或杀死的，它的存储器资源在它终止时由系统自动释放。
+
+    线程的分离状态决定一个线程以什么样的方式来终止自己。在默认情况下线程是非分离状态的。
+这种情况下，原有的线程等待创建的线程结束。只有当pthread_join（）函数返回时，创建的线程才算终止，才能释放自己占用的系统资源。
+    而分离线程不是这样子的，它没有被其他的线程所等待，自己运行结束了，线程也就终止了，马上释放系统资源。
+    程序员应该根据自己的需要，选择适当的分离状态。所以如果我们在创建线程时就知道不需要了解线程的终止状态，
+    则可以pthread_attr_t结构中的detachstate线程属性，让线程以分离状态启动。
+
 函数原型：
 	int pthread_detach(pthread_t tid);
 参   数：
@@ -131,7 +143,52 @@ tid：线程标识符
 	进程中的Zombie Process,即还有一部分资源没有被回收（退出状态码），所以创建线程者应该
 	pthread_join来等待线程运行结束，并可得到线程的退出代码，回收其资源（类似于wait,waitpid)
 
+使用方法：
+    如果不关心一个线程的结束状态，那么也可以将一个线程设置为 detached 状态，从而让操作系统在该线程结束时来回收它所占的资源。
+将一个线程设置为detached 状态可以通过两种方式来实现。一种是调用 pthread_detach() 函数，可以将线程 th 设置为 detached 状态。
+另一种方法是在创建线程时就将它设置为 detached 状态，首先初始化一个线程属性变量，然后将其设置为 detached 状态，
+最后将它作为参数传入线程创建函数 pthread_create()，这样所创建出来的线程就直接处于 detached 状态。
+
+    pthread_t tid;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    pthread_create(&tid, &attr, THREAD_FUNCTION, arg);
+
+    总之为了在使用 pthread 时避免线程的资源在线程结束时不能得到正确释放，从而避免产生潜在的内存泄漏问题，
+在对待线程结束时，要确保该线程处于 detached 状态，否着就需要调用 pthread_join() 函数来对其进行资源回收。
 */
+
+void* thread_func(void* arg)
+{
+        int i=1;
+        while(i<10)
+        {
+                sleep(1);
+                printf("%ld\n",pthread_self());
+        }
+        pthread_exit(NULL);
+}
+
+
+int pthread_destroy_demo()
+{
+        pthread_attr_t attr;
+        pthread_t pthread_id;
+        /*set pthread detach*/
+        pthread_attr_init(&attr);
+
+        pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
+
+        strerror(pthread_create(&pthread_id,&attr,thread_func,NULL));/*create pthread*/
+
+        pthread_attr_destroy(&attr);
+
+        pthread_exit(NULL);
+        return 0;
+}
+
+
 
 /*
 七、线程清理:
