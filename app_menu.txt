@@ -52,5 +52,9 @@
      getopt_long_only函数来解析命令行参数。
    10.钩子函数
    11.回调函数深度操作
+   12.sscanf
+   13.Socket tcp/ip UDP sendto和recvfrom使用详解
+   14.复杂网络服务器设计
+   15.HTTP协议
       
 
