@@ -2,7 +2,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
-
 #include <pthread.h>
 
 /*
@@ -165,27 +164,31 @@ void* thread_func(void* arg)
         while(i<10)
         {
                 sleep(1);
-                printf("%ld\n",pthread_self());
+                printf(" i: %d, pthread_self:%ld\n", i, pthread_self());
+		i++;
         }
         pthread_exit(NULL);
 }
 
 
-int pthread_destroy_demo()
+int pthread_detach_demo()
 {
         pthread_attr_t attr;
         pthread_t pthread_id;
+	
+	printf("%s\n", __func__); 
         /*set pthread detach*/
         pthread_attr_init(&attr);
 
-        pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-        strerror(pthread_create(&pthread_id,&attr,thread_func,NULL));/*create pthread*/
+        strerror(pthread_create(&pthread_id, &attr, thread_func, NULL));/*create pthread*/
 
         pthread_attr_destroy(&attr);
 
         pthread_exit(NULL);
-        return 0;
+        
+	return 0;
 }
 
 
@@ -306,7 +309,8 @@ int pthread_clean_demo(void *arg)
 int main(int argc, char *argv[])
 {
 	pthread_t pthread_ta, pthread_tb;
-	printf("pthread_t size is:%d\n",sizeof(pthread_t));
+	
+        printf("pthread_t size is:%d\n",sizeof(pthread_t));
 
 	if(argc!=3)
 	{
@@ -326,6 +330,8 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	pthread_detach_demo();
+	
 	pthread_join(pthread_ta, NULL);
 	pthread_join(pthread_tb, NULL);
 
