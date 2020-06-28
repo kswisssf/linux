@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
     {10002, "Zhifubao", 80,81,82},
     {10003, "Taobao", 70,71,72},
     {10004, "Alli", 60,61,62},
-    {10005, "Tianmao", 50,51,52}
+    {10005, "Tianmao", 50,51,52},
   };
 
   STU boy = {10006, "Mahuateng", 40,41,42};
