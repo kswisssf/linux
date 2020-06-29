@@ -96,13 +96,19 @@ struct msgbuf {
 	char mtext[1];  //消息文本 
 };
 msgsz：消息的大小。
+
 msgtyp：消息类型
 	msgtyp等于0,  则返回队列的最早的一个消息。
 	msgtyp大于0,  则返回其类型为msgtyp的第一个消息。
 	msgtyp小于0,  则返回其类型小于或等于mtype参数的绝对值的最小的一个消息。
-msgflg：
-	这个参数依然是控制函数行为的标志，取值可以是：0,表示忽略；
-	IPC_NOWAIT，如果消息队列为空，则返回一个ENOMSG，并将控制权交回调用函数的进程。
+
+参数 msgflg：可选项。
+	如果为 0 表示没有消息就阻塞。
+	IPC_NOWAIT：如果指定类型的消息不存在就立即返回，同时设置 errno 为 ENOMSG
+	MSG_EXCEPT：仅用于 msgtyp > 0 的情况。表示获取类型不为 msgtyp 的消息
+	MSG_NOERROR：如果消息数据正文内容大于 msgsz，就将消息数据截断为 msgsz
+
+
 */
 
 /*
