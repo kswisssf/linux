@@ -134,12 +134,13 @@ int fprintf_demo_4(void)
     char* s = "fprintf_demo_4";
     fp = fopen("text.dat", "w");
 /*
-fputs是一个函数，具有的功能是向指定的文件写入一个字符串（不自动写入字符串结束标记符‘\0’）。成功写入一个字符串后，文件的位置指针会自动后移，函数返回值为非负整数；否则返回EOF(符号常量，其值为-1)。
+fputs是一个函数，具有的功能是向指定的文件写入一个字符串（不自动写入字符串结束标记符‘\0’）。
+成功写入一个字符串后，文件的位置指针会自动后移，函数返回值为非负整数；否则返回EOF(符号常量，其值为-1)。
 函数原型:
 	int fputs(const char *str, FILE *stream);
 返回值：该函数返回一个非负值，如果发生错误则返回 EOF(-1)。
    （1）str：这是一个数组，包含了要写入的以空字符终止的字符序列。
-   （2）stream：指向 FILE 对象的指针，该 FILE 对象标识了要被写入字符串的流
+   （2）stream：指向 FILE 对象的指针，该 FILE 对象标识了要被写入字符串的流。
 */
     fputs("total", fp);
     fputs(":", fp);
@@ -189,7 +190,7 @@ int sprintf_demo()
 	offset += sprintf(buffer, "Integer: %d\n", i);
 	printf("Output:\n%s length count:%d\n\n", buffer, offset);
 	/*
-	浮点数的打印和格式控制,格式符”%f”控制，默认保留小数点后6 位数字.
+	浮点数的打印和格式控制,格式符”%f”控制，默认保留小数点后6位数字.
 	控制打印的宽度和小数位数，”%m.nf”格式，其中m 表示打印的宽度，n 表示小数点后的位数。比如：
 	*/
 	offset += sprintf(buffer, "float: %.5f", fd);

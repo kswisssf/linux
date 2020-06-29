@@ -14,25 +14,6 @@
 	int fcntl(int fd, int cmd); 
 　　 int fcntl(int fd, int cmd, long arg); 
 
-(3) 参数fd
-	参数fd代表欲设置的文件描述符。
-(4) 参数cmd
-	参数cmd代表打算操作的指令。
-(5) 有以下几种情况:
-	1. F_DUPFD用来查找大于或等于参数arg的最小且仍未使用的文件描述符，并且复制参数fd的文件描述符。
-	   执行成功则返回新复制的文件描述符。新描述符与fd共享同一文件表项，但是新描述符有它自己的一套
-	   文件描述符标志，其中FD_CLOEXEC文件描述符标志被清除。请参考dup2()。
-	2. F_GETFD取得close-on-exec旗标。若此旗标的FD_CLOEXEC位为0，代表在调用exec()相关
-	   函数时文件将不会关闭。
-	3. F_SETFD 设置close-on-exec 旗标。该旗标以参数arg 的FD_CLOEXEC位决定。
-	4. F_GETFL 取得文件描述符状态旗标，此旗标为open（）的参数flags。
-	5. F_SETFL 设置文件描述符状态旗标，参数arg为新旗标，但只允许O_APPEND、O_NONBLOCK
-	   和O_ASYNC位的改变，其他位的改变将不受影响。
-	6. F_GETLK 取得文件锁定的状态。
-	7. F_SETLK 设置文件锁定的状态。此时flcok结构的l_type值必须是F_RDLCK、F_WRLCK或F_UNLCK。
-	   如果无法建立锁定，则返回-1，错误代码为EACCES 或EAGAIN。
-	8. F_SETLKW F_SETLK 作用相同，但是无法建立锁定时，此调用会一直等到锁定动作成功为止。
-	   若在等待锁定的过程中被信号中断时，会立即返回-1，错误代码为EINTR。
 */
 
 #include <unistd.h>
@@ -87,11 +68,15 @@ int fcntl_demo(void)
 		perror("F_SETFL");
 		exit(1);
 	}
-
+	char *ret;
+	int errno;
 	//再次输入新的内容，该内容会追加到旧内容对的后面
 	if( write(fd, msg2, strlen(msg2)) == -1)
 	{
+
 		perror("write msg2");
+		ret = strerror(errno);
+		printf("strerror ret: %s\n", ret);
 		exit(1);
 	}
 
@@ -132,13 +117,34 @@ int fcntl_demo(void)
 (2)返回值
 		成功返回依赖于cmd的值，若有错误则返回-1，错误原因存于errno.
 
+(3) 参数fd
+	参数fd代表欲设置的文件描述符。
+(4) 参数cmd
+	参数cmd代表打算操作的指令。有以下几种情况:
+	1. F_DUPFD用来查找大于或等于参数arg的最小且仍未使用的文件描述符，并且复制参数fd的文件描述符。
+	   执行成功则返回新复制的文件描述符。新描述符与fd共享同一文件表项，但是新描述符有它自己的一套
+	   文件描述符标志，其中FD_CLOEXEC文件描述符标志被清除。请参考dup2()。
+	2. F_GETFD取得close-on-exec旗标。若此旗标的FD_CLOEXEC位为0，代表在调用exec()相关
+	   函数时文件将不会关闭。
+	3. F_SETFD 设置close-on-exec 旗标。该旗标以参数arg 的FD_CLOEXEC位决定。
+	4. F_GETFL 取得文件描述符状态旗标，此旗标为open（）的参数flags。
+	5. F_SETFL 设置文件描述符状态旗标，参数arg为新旗标，但只允许O_APPEND、O_NONBLOCK
+	   和O_ASYNC位的改变，其他位的改变将不受影响。
+	6. F_GETLK 取得文件锁定的状态。
+	7. F_SETLK 设置文件锁定的状态。此时flcok结构的l_type值必须是F_RDLCK、F_WRLCK或F_UNLCK。
+	   如果无法建立锁定，则返回-1，错误代码为EACCES 或EAGAIN。
+	8. F_SETLKW F_SETLK 作用相同，但是无法建立锁定时，此调用会一直等到锁定动作成功为止。
+	   若在等待锁定的过程中被信号中断时，会立即返回-1，错误代码为EINTR。
+
 */
+int errno;
 
 int fcntl_lock(void) 
 {
-	int fd,res;
+	int fd,ret;
 	struct flock region;
 
+	char *strerr;
 	//chmod("test_file",S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 	fd = open("lock_file", O_CREAT|O_RDWR, 0777);
 	if(fd == -1)
@@ -148,7 +154,7 @@ int fcntl_lock(void)
     }
 
 	//F_GETLK 取得文件锁定的状态。
-	if((res = fcntl(fd, F_GETLK, &region)) == 0)
+	if((ret = fcntl(fd, F_GETLK, &region)) == 0)
     {
     	if(region.l_type == F_UNLCK)	//F_UNLCK 删除之前建立的锁定
         {
@@ -161,8 +167,12 @@ int fcntl_lock(void)
     }
  	else
     {
-    	printf("F_GETLK error.\n");
-    	exit(1);
+    	printf("ret : %d \n", ret);
+    	perror("F_GETLK error.\n");
+		printf("ret errno: %d\n", errno);
+		strerr = strerror(errno);
+		printf("sterror ret:%s\n", strerr);    
+		exit(1);
     }
 
   	region.l_type = F_RDLCK;
@@ -171,7 +181,7 @@ int fcntl_lock(void)
   	region.l_len = 40;
   	region.l_pid = 2;
   	//F_SETLK 设置文件锁定的状态。此时flcok结构的l_type值必须是F_RDLCK、F_WRLCK或F_UNLCK。
-  	if((res = fcntl(fd, F_SETLK, &region)) == 0)
+  	if((ret = fcntl(fd, F_SETLK, &region)) == 0)
     {
     	if(region.l_type == F_RDLCK)
         {
@@ -188,7 +198,7 @@ int fcntl_lock(void)
    	}
 
 	
-	if((res = fcntl(fd, F_GETLK, &region)) == 0)
+	if((ret = fcntl(fd, F_GETLK, &region)) == 0)
     {
       if(region.l_type == F_UNLCK)
         {
@@ -210,7 +220,7 @@ int fcntl_lock(void)
 	region.l_start = 0;
 	region.l_len = 40;
 	region.l_pid = 2;
-	if((res = fcntl(fd, F_SETLK, &region)) == 0)
+	if((ret = fcntl(fd, F_SETLK, &region)) == 0)
     {
 		if(region.l_type == F_WRLCK)
         {
