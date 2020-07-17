@@ -98,6 +98,8 @@ read/write和fread/fwrite区别:
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/time.h> 
+#include <unistd.h> 
 
 #define NUM   5
 
@@ -177,6 +179,184 @@ fseek对此函数有作用，但是fwrite函数写到用户空间缓冲区，并
   fclose(fp);
 
 }
+
+
+
+/*
+select()函数以及FD_ZERO、FD_SET、FD_CLR、FD_ISSET
+
+select函数用于在非阻塞中，当一个套接字或一组套接字有信号时通知你，系统提供select函数来实现
+多路复用输入/输出模型，原型：
+#include <sys/time.h> 
+#include <unistd.h> 
+int select(int maxfd,fd_set *rdset,fd_set *wrset,fd_set *exset,struct timeval *timeout);
+
+参数maxfd是需要监视的最大的文件描述符值+1；
+rdset,wrset,exset分别对应于需要检测的可读文件描述符的集合，可写文件描述符的集 合及异常文件描述符的集合。
+
+struct timeval结构用于描述一段时间长度，如果在这个时间内，需要监视的描述符没有事件发生则函数返回，返回值为0。
+fd_set（它比较重要所以先介绍一下）是一组文件描述字(fd)的集合，它用一位来表示一个fd（下面会仔细介绍），
+
+对于fd_set类型通过下面四个宏来操作：
+    FD_ZERO(fd_set *fdset):将指定的文件描述符集清空，在对文件描述符集合进行设置前，必须对其进行初始化，
+                           如果不清空，由于在系统分配内存空间后，通常并不作清空处理，所以结果是不可知的。
+    FD_SET(fd_set *fdset):用于在文件描述符集合中增加一个新的文件描述符。 
+    FD_CLR(fd_set *fdset):用于在文件描述符集合中删除一个文件描述符。 
+    FD_ISSET(int fd,fd_set *fdset):用于测试指定的文件描述符是否在该集合中。
+
+
+过去，一个fd_set通常只能包含<32的fd（文件描述字），因为fd_set其实只用了一个32位矢量来表示fd；
+现在,UNIX系统通常会在头文件<sys/select.h>中定义常量FD_SETSIZE，它是数据类型fd_set的描述字数量，
+其值通常是1024，这样就能表示<1024的fd。
+
+根据fd_set的位矢量实现，我们可以重新理解操作fd_set的四个宏：
+    fd_set set;
+    FD_ZERO(&set);     
+    FD_SET(0, &set);   
+    FD_CLR(4, &set);     
+    FD_ISSET(5, &set);   
+―――――――――――――――――――――――――――――――――――――――
+注意fd的最大值必须<FD_SETSIZE。
+―――――――――――――――――――――――――――――――――――――――
+
+2、select函数的接口比较简单：
+    int select(int nfds, fd_set *readset, fd_set *writeset,fd_set* exceptset, struct tim *timeout);
+功能：
+    测试指定的fd可读？可写？有异常条件待处理？     
+参数：
+    nfds    
+      需要检查的文件描述字个数（即检查到fd_set的第几位），数值应该比三组fd_set中所含的最大fd值更大，
+      一般设为三组fd_set中所含的最大fd值加1（如在readset,writeset,exceptset中所含最大的fd为5，
+      则nfds=6，因为fd是从0开始的）。设这个值是为提高效率，使函数不必检查fd_set的所有1024位。
+    readset   
+      用来检查可读性的一组文件描述字。
+    writeset
+      用来检查可写性的一组文件描述字。
+    exceptset
+      用来检查是否有异常条件出现的文件描述字。(注：错误不包括在异常条件之内)
+    timeout
+      用于描述一段时间长度，如果在这个时间内，需要监视的描述符没有事件发生则函数返回，返回值为0。 
+    有三种可能：
+      1.timeout=NULL（阻塞：select将一直被阻塞，直到某个文件描述符上发生了事件）
+      2.timeout所指向的结构设为非零时间（等待固定时间：如果在指定的时间段里有事件发生或者时间耗尽，函数均返回）
+      3.timeout所指向的结构，时间设为0（非阻塞：仅检测描述符集合的状态，然后立即返回，并不等待外部事件的发生）
+
+返回值：     
+    返回对应位仍然为1的fd的总数。
+
+Remarks：
+    三组fd_set均将某些fd位置0，只有那些可读，可写以及有异常条件待处理的fd位仍然为1。
+
+>>>举个例子，比如recv(),在没有数据到来调用它的时候,你的线程将被阻塞,如果数据一直不来,你的线程就要
+阻塞很久.这样显然不好. 所以采用select来查看套节字是否可读(也就是是否有数据读了)  
+步骤如下:
+socket   s;   
+.....   
+fd_set   set;   
+while(1)   
+{       
+      FD_ZERO(&set);    //将你的套节字集合清空   
+      FD_SET(s,   &set);//加入你感兴趣的套节字到集合,这里是一个读数据的套节字s   
+      select(0,&set,NULL,NULL,NULL);//检查套节字是否可读,   
+                                    //很多情况下就是是否有数据(注意,只是说很多情况)  
+                                    //这里select是否出错没有写   
+      if(FD_ISSET(s, &set)   //检查s是否在这个集合里面,   
+      {                      //select将更新这个集合,把其中不可读的套节字去掉   
+                             //只保留符合条件的套节字在这个集合里面                         
+          recv(s,...);   
+      }   
+      //do something here   
+}
+
+理解select模型的关键在于理解fd_set,为说明方便，取fd_set长度为1字节，fd_set中的每一bit可以对应
+一个文件描述符fd。则1字节长的fd_set最大可以对应8个fd。
+    （1）执行fd_set set; FD_ZERO(&set);则set用位表示是0000,0000。
+    （2）若fd＝5,执行FD_SET(fd,&set);后set变为0001,0000(第5位置为1)
+    （3）若再加入fd＝2，fd=1,则set变为0001,0011
+    （4）执行select(6,&set,0,0,0)阻塞等待
+    （5）若fd=1,fd=2上都发生可读事件，则select返回，此时set变为0000,0011。
+注意：没有事件发生的fd=5被清空。
+
+*/
+
+/*
+
+ 使用select函数的过程一般是：
+    先调用宏FD_ZERO将指定的fd_set清零，然后调用宏FD_SET将需要测试的fd加入fd_set，接着调用函数select测试fd_set中的所有fd，最后用宏FD_ISSET检查某个fd在函数select调用后，相应位是否仍然为1。
+    以下是一个测试单个文件描述字可读性的例子：
+
+*/
+
+#include <sys/time.h>
+#include <time.h>
+
+typedef enum BOOL{
+  TRUE = 1,
+  FALSE = 0,
+}bool;
+
+struct tim {
+    time_t      tv_sec;    
+    suseconds_t tv_usec;   
+};
+
+int isready(int fd)
+{
+  int rc;
+  fd_set fds;
+  struct tim tv;    
+  FD_ZERO(&fds);
+  FD_SET(fd,&fds);
+
+  tv.tv_sec = tv.tv_usec = 0;    
+   
+  rc = select(fd+1, &fds, NULL, NULL, &tv);
+  if (rc < 0)   //error
+    return -1;    
+  
+  return FD_ISSET(fd,&fds) ? 1 : 0;
+}
+
+/*
+下面还有一个复杂一些的应用：
+这段代码将指定测试Socket的描述字的可读可写性，因为Socket使用的也是fd
+*/
+
+unsigned int SocketWait(int socketfd,bool rd,bool wr,unsigned int timems)    
+{
+     fd_set rfds,wfds;
+     struct tim tv;
+     
+     FD_ZERO(&rfds);
+     FD_ZERO(&wfds); 
+     if (rd)     //TRUE
+        FD_SET(socketfd, &rfds);   //添加要测试的描述字 
+     if (wr)     //FALSE
+        FD_SET(socketfd, &wfds); 
+     tv.tv_sec  = timems/1000;     //second
+     tv.tv_usec = timems%1000;     //ms 
+     for (;;) //如果errno==EINTR，反复测试缓冲区的可读性
+          switch(select(socketfd+1, &rfds, &wfds, NULL,
+                  (timems==0?NULL:&tv))) //测试在规定的时间内套接口接收缓冲区中是否有数据可读
+          {                                              //0－－超时，-1－－出错
+          case 0:    
+              return 0;
+          break;
+
+          case (-1):            
+              return 0; //有错但不是EINTR 
+          break;
+
+          default:
+              if (FD_ISSET(socketfd, &rfds)) //如果s是fds中的一员返回非0，否则返回0
+                  return 1;
+              if (FD_ISSET(socketfd, &wfds))
+                  return 2;
+              return 0;
+          break;
+          };
+}
+
 
 #define FILENAME    "student"
 
